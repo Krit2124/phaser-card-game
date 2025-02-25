@@ -5,6 +5,9 @@ import MainLayout from "./layouts/MainLayout/MainLayout.tsx";
 import ErrorPage from "@/pages/ErrorPage/ErrorPage.tsx";
 import GameSelectionPage from "@/pages/GameSelectionPage/GameSelectionPage.tsx";
 
+import './globalStyles/global.css'
+import './globalStyles/colors.css'
+
 const router = createBrowserRouter([
   {
     path: "/",

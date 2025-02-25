@@ -3,3 +3,19 @@
   padding: 0;
   box-sizing: border-box;
 }
+
+body {
+  font-family: "Roboto", sans-serif;
+}
+
+button {
+  cursor: pointer;
+}
+
+h1, h2, h3, h4, h5, h6, p, a {
+  color: rgb(230, 230, 230);
+}
+
+a {
+  text-decoration: none;
+}

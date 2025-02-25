@@ -1,0 +1,18 @@
+.defaultButton {
+  background-color: var(--brown-pale);
+  border: 3px solid var(--brown-dark);
+  border-radius: 100px;
+  padding: 10px 15px;
+  min-width: 150px;
+  font-size: 14px;
+  font-weight: bolder;
+}
+
+.defaultButton:hover {
+  background-color: var(--brown-primary);
+}
+
+.defaultButton:disabled {
+  background-color: var(--brown-dark);
+  cursor: default !important;
+}
