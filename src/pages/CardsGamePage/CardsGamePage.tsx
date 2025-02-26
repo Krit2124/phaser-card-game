@@ -4,6 +4,7 @@ import { CardsGameSettings } from "@/widgets/CardsGameSettings";
 import { CardsGame } from "@/widgets/CardsGame";
 
 const CardsGamePage = () => {
+  const [selectedBackgroundId, setSelectedBackgroundId] = useState(0)
   const [players, setPlayers] = useState(2);
   function setPlayersWithMinMaxCheck(value: number) {
     if (value < 2) {
@@ -20,12 +21,14 @@ const CardsGamePage = () => {
   return (
     <section className={s.container}>
       {isGameStarted ? (
-        <CardsGame players={players} />
+        <CardsGame players={players} selectedBackgroundId={selectedBackgroundId} />
       ) : (
         <CardsGameSettings
           players={players}
           setPlayers={setPlayersWithMinMaxCheck}
           startGame={() => setIsGameStarted(true)}
+          selectedBackgroundId={selectedBackgroundId}
+          setSelectedBackgroundId={setSelectedBackgroundId}
         />
       )}
     </section>

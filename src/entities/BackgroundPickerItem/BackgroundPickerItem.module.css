@@ -1,0 +1,21 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  cursor: pointer;
+}
+
+.selectedContainer {
+  background-color: var(--gray-pale);
+}
+
+.radioButton {
+  display: none;
+}
+
+.bgImage {
+  width: 100px;
+  height: 100px;
+  border-radius: 10px;
+}
