@@ -19,7 +19,9 @@ export class CardsGameScene extends Phaser.Scene {
   private unplayedDeck!: UnplayedDeck;
   private interactiveTable!: InteractiveTable;
   private players!: PlayerHand[];
+
   private defendingPlayerId: number = 1;
+  private maxCardsForThisTurn: number = 4;
 
   constructor(config: CardsGameSceneConfig) {
     super("CardsGameScene");
@@ -96,28 +98,55 @@ export class CardsGameScene extends Phaser.Scene {
       } else {
         player.setRole(SUPPORT);
       }
+      player.playedCardsOnTurn = 0;
     });
+
+    // Максимум может разыграться столько карт, сколько есть у защищающегося
+    this.maxCardsForThisTurn =
+      this.players[this.defendingPlayerId].cards.length;
   }
 
   private endTurn() {
     this.interactiveTable.removeAllCards();
+    this.defendingPlayerId =
+      this.defendingPlayerId < this.playersAmount - 1
+        ? this.defendingPlayerId + 1
+        : 0;
     // FIXME: добавить логику выдачи карт
     this.startTurn();
   }
 
-  private handleCardPlayed(card: Card, playerId: number, playerRole: string, x: number, y: number) {
+  private handleCardPlayed(
+    card: Card,
+    playerId: number,
+    playerRole: string,
+    x: number,
+    y: number
+  ) {
     let isAdded = false;
+    const player = this.players[playerId];
 
-    if (playerRole === ATTACKER || (playerRole === SUPPORT && this.interactiveTable.attackCardsDataOnTable.length > 0)) {
-      isAdded = this.interactiveTable.addAttackCard(card);
+    if (
+      playerRole === ATTACKER ||
+      (playerRole === SUPPORT &&
+        this.interactiveTable.attackCardsDataOnTable.length > 0)
+    ) {
+      if (
+        this.maxCardsForThisTurn >
+          this.interactiveTable.attackCardsDataOnTable.length &&
+        player.playedCardsOnTurn < 3
+      ) {
+        isAdded = this.interactiveTable.addAttackCard(card);
+      }
     } else if (playerRole === DEFENDER) {
       isAdded = this.interactiveTable.addDefenseCard(card, x, y);
     }
-    
+
     if (isAdded) {
-      this.players[playerId].removeCard(card.id);
+      player.playedCardsOnTurn += 1;
+      player.removeCard(card.id);
     } else {
-      this.players[playerId].returnCardToHand(card.id);
+      player.returnCardToHand(card.id);
     }
   }
 

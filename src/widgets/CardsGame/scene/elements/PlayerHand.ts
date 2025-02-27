@@ -5,6 +5,7 @@ import { SUPPORT } from "../../constants/playerRoles";
 export default class PlayerHand extends Phaser.GameObjects.Container {
   private playerId: number;
   public role: string = SUPPORT;
+
   private cardOffsetX: number = 35; // Смещение по X между картами
   private cardOffsetY: number = 4; // Смещение по Y между картами
   private cardRotation: number = 0.08; // Угол поворота карт (в радианах)
@@ -12,6 +13,10 @@ export default class PlayerHand extends Phaser.GameObjects.Container {
   public cards: Card[] = [];
   private cardsImages: Phaser.GameObjects.Image[] = [];
   private initialCardPositions: { x: number; y: number }[] = [];
+
+  public isPassed: boolean = false;
+  private passButton: Phaser.GameObjects.Text;
+  public playedCardsOnTurn: number = 0;
 
   constructor(
     scene: Phaser.Scene,
@@ -24,12 +29,31 @@ export default class PlayerHand extends Phaser.GameObjects.Container {
 
     this.playerId = playerId;
 
+    this.passButton = this.scene.add
+      .text(0, -cardsSizes.height, "Пропустить ход", {
+        fontFamily: "Roboto",
+        fontSize: "24px",
+        color: "#ffffff",
+        backgroundColor: "#000000",
+        padding: { x: 10, y: 5 },
+      })
+      .setOrigin(0.5)
+      .setInteractive({ cursor: "pointer" })
+      .setVisible(true);
+    this.passButton.on("pointerdown", () => this.setIsPassed(true));
+    this.add(this.passButton);
+
     scene.add.existing(this);
     this.rotation = angle;
   }
 
   public setRole(role: string) {
     this.role = role;
+  }
+
+  public setIsPassed(isPassed: boolean) {
+    this.isPassed = isPassed;
+    this.passButton.setVisible(!isPassed);
   }
 
   public addCard(card: Card) {
@@ -45,7 +69,7 @@ export default class PlayerHand extends Phaser.GameObjects.Container {
     this.initialCardPositions.push({ x: this.x, y: this.y });
 
     this.scene.input.setDraggable(cardImage);
-    this.setupCardDragEvents(cardImage, this.cardsImages.length - 1);
+    this.setupCardDragEvents(cardImage, card.id);
 
     this.updateCardsPositions();
 
@@ -58,14 +82,12 @@ export default class PlayerHand extends Phaser.GameObjects.Container {
     this.cards.splice(index, 1);
     this.cardsImages[index].destroy();
     this.cardsImages.splice(index, 1);
+    this.initialCardPositions.splice(index, 1);
 
     this.updateCardsPositions();
   }
 
-  private setupCardDragEvents(
-    cardImage: Phaser.GameObjects.Image,
-    index: number
-  ) {
+  private setupCardDragEvents(cardImage: Phaser.GameObjects.Image, id: number) {
     cardImage.on(
       "drag",
       (pointer: Phaser.Input.Pointer, dragX: number, dragY: number) => {
@@ -81,19 +103,16 @@ export default class PlayerHand extends Phaser.GameObjects.Container {
       ) as Phaser.GameObjects.Zone;
 
       if (table && table.getBounds().contains(pointer.x, pointer.y)) {
-        // Карта перетащена на стол
-        // Вызываем событие из основной сцены на размещение карты на столе
         this.emit(
           "cardPlayed",
-          this.cards[index],
+          this.cards.find((card) => card.id === id),
           this.playerId,
           this.role,
           pointer.x,
           pointer.y
         );
       } else {
-        // Возвращаем карту на место
-        this.returnCardToHand(this.cards[index].id);
+        this.returnCardToHand(id);
       }
     });
   }
