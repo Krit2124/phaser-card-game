@@ -1,11 +1,11 @@
 import Phaser from "phaser";
-
 import { deck28 } from "@/shared/constants";
-import { SceneBackground } from "@/shared/types";
+import { Card, SceneBackground } from "@/shared/types";
 import UnplayedDeck from "./elements/UnplayedDeck";
 import InteractiveTable from "./elements/InteractiveTable";
 import { cardsSizes } from "../constants/cardsSizes";
 import PlayerHand from "./elements/PlayerHand";
+import { ATTACKER, DEFENDER, SUPPORT } from "../constants/playerRoles";
 
 interface CardsGameSceneConfig {
   playersAmount: number;
@@ -19,6 +19,7 @@ export class CardsGameScene extends Phaser.Scene {
   private unplayedDeck!: UnplayedDeck;
   private interactiveTable!: InteractiveTable;
   private players!: PlayerHand[];
+  private defendingPlayerId: number = 1;
 
   constructor(config: CardsGameSceneConfig) {
     super("CardsGameScene");
@@ -42,11 +43,8 @@ export class CardsGameScene extends Phaser.Scene {
 
     this.add.tileSprite(0, 0, width, height, "background").setOrigin(0, 0);
 
-    this.unplayedDeck = new UnplayedDeck(
-      this,
-      marginFromSceneBorders + 200,
-      height / 2
-    );
+    this.unplayedDeck = new UnplayedDeck(this, 200, height / 2);
+
     this.interactiveTable = new InteractiveTable(
       this,
       width,
@@ -56,16 +54,18 @@ export class CardsGameScene extends Phaser.Scene {
 
     const playersPositions = this.calculatePlayersPositions(width, height);
 
+    // Временный массив для игроков, так как push в this.players вызывает ошибку
     const tempPlayers = [];
     for (let i = 0; i < this.playersAmount; i++) {
-      tempPlayers.push(
-        new PlayerHand(
-          this,
-          playersPositions[i].x,
-          playersPositions[i].y,
-          playersPositions[i].angle
-        )
+      const playerHand = new PlayerHand(
+        this,
+        playersPositions[i].x,
+        playersPositions[i].y,
+        playersPositions[i].angle,
+        i
       );
+      playerHand.on("cardPlayed", this.handleCardPlayed, this);
+      tempPlayers.push(playerHand);
     }
     this.players = tempPlayers;
 
@@ -75,9 +75,51 @@ export class CardsGameScene extends Phaser.Scene {
         this.players[i].addCard(card);
       }
     }
+
+    this.startTurn();
   }
 
   update() {}
+
+  private startTurn() {
+    // Распределение ролей игроков
+    const attackerId =
+      this.defendingPlayerId > 0
+        ? this.defendingPlayerId - 1
+        : this.playersAmount - 1;
+
+    this.players.forEach((player, index) => {
+      if (index === this.defendingPlayerId) {
+        this.players[this.defendingPlayerId].setRole(DEFENDER);
+      } else if (index === attackerId) {
+        player.setRole(ATTACKER);
+      } else {
+        player.setRole(SUPPORT);
+      }
+    });
+  }
+
+  private endTurn() {
+    this.interactiveTable.removeAllCards();
+    // FIXME: добавить логику выдачи карт
+    this.startTurn();
+  }
+
+  private handleCardPlayed(card: Card, playerId: number, playerRole: string, x: number, y: number) {
+    let isAdded = false;
+
+    if (playerRole === ATTACKER || (playerRole === SUPPORT && this.interactiveTable.attackCardsDataOnTable.length > 0)) {
+      isAdded = this.interactiveTable.addAttackCard(card);
+    } else if (playerRole === DEFENDER) {
+      isAdded = this.interactiveTable.addDefenseCard(card, x, y);
+    }
+    
+    if (isAdded) {
+      this.players[playerId].removeCard(card.id);
+    } else {
+      this.players[playerId].returnCardToHand(card.id);
+    }
+  }
 
   private calculatePlayersPositions(width: number, height: number) {
     const normalAngle = 0;

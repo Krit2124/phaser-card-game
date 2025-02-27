@@ -13,23 +13,27 @@ export default class UnplayedDeck extends Phaser.GameObjects.Container {
     super(scene, x, y);
 
     this.deckImage = this.scene.add
-      .image(x, y, "card_back")
-      .setSize(cardsSizes.width, cardsSizes.height)
+      .image(0, 0, "card_back")
       .setDisplaySize(cardsSizes.width, cardsSizes.height);
+    this.add(this.deckImage);
 
     this.availableCardsBackground = scene.add
-      .circle(x, y, 50, 0x353535)
+      .circle(0, 0, 50, 0x353535)
       .setStrokeStyle(5, 0xffffff);
+    this.add(this.availableCardsBackground);
 
     this.availableCardsText = this.scene.add
-      .text(x, y, String(this.availableCards), {
+      .text(0, 0, String(this.availableCards), {
         fontSize: "64px",
         fontFamily: "Roboto",
         fontStyle: "bold",
       })
       .setOrigin(0.5);
+    this.add(this.availableCardsText);
 
     this.shuffleCards();
+
+    this.scene.add.existing(this);
   }
 
   public shuffleCards() {
