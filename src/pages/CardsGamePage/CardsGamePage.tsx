@@ -21,7 +21,7 @@ const CardsGamePage = () => {
   return (
     <section className={s.container}>
       {isGameStarted ? (
-        <CardsGame players={players} selectedBackgroundId={selectedBackgroundId} />
+        <CardsGame playersAmount={players} selectedBackgroundId={selectedBackgroundId} />
       ) : (
         <CardsGameSettings
           players={players}

@@ -6,11 +6,11 @@ import { backgroundsForCardsGame } from "@/shared/constants";
 import s from "./CardsGame.module.css";
 
 interface CardsGameProps {
-  players: number;
+  playersAmount: number;
   selectedBackgroundId: number;
 }
 
-const CardsGame = ({players, selectedBackgroundId}: CardsGameProps) => {
+const CardsGame = ({playersAmount, selectedBackgroundId}: CardsGameProps) => {
   const gameRef = useRef<HTMLDivElement>(null);
   const background = backgroundsForCardsGame[selectedBackgroundId];
 
@@ -20,7 +20,7 @@ const CardsGame = ({players, selectedBackgroundId}: CardsGameProps) => {
       parent: gameRef.current!,
       width: window.innerWidth,
       height: window.innerHeight,
-      scene: [new CardsGameScene({ players, background }),],
+      scene: [new CardsGameScene({ playersAmount, background }),],
     });
     return () => {
       game.destroy(true);

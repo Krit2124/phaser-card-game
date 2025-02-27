@@ -1,8 +1,9 @@
+import { Card } from "../types";
 import { SUIT_CLUBS, SUIT_DIAMONDS, SUIT_HEARTS, SUIT_SPADES } from "./suits";
 
 // Колода со всеми картами
 // 11 — валет, 12 — дама, 13 — король, 14 — туз
-export const deck52 = [
+export const deck52: Card[] = [
   ...[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14].flatMap((rank, index) => [
     {
       id: index * 4 + 1,
