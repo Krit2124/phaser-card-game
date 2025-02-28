@@ -110,6 +110,8 @@ export default class InteractiveTable extends Phaser.GameObjects.Container {
   }
 
   public removeAllCards() {
+    const amountOfCardsToRemove = this.attackCardsOnTable.length + this.defenseCardsOnTable.length;
+
     this.attackCardsOnTable.forEach((card) => card.destroy());
     this.attackCardsOnTable = [];
     this.attackCardsDataOnTable = [];
@@ -117,6 +119,8 @@ export default class InteractiveTable extends Phaser.GameObjects.Container {
     this.defenseCardsOnTable.forEach((card) => card.destroy());
     this.defenseCardsOnTable = [];
     this.defenseCardsDataOnTable = [];
+
+    return amountOfCardsToRemove;
   }
 
   // Получение сетки 3x2 для карт

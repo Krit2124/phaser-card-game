@@ -6,6 +6,7 @@ import InteractiveTable from "./elements/InteractiveTable";
 import { cardsSizes } from "../constants/cardsSizes";
 import PlayerHand from "./elements/PlayerHand";
 import { ATTACKER, DEFENDER, SUPPORT } from "../constants/playerRoles";
+import PlayedDeck from "./elements/PlayedDeck";
 
 interface CardsGameSceneConfig {
   playersAmount: number;
@@ -19,6 +20,7 @@ export class CardsGameScene extends Phaser.Scene {
   private unplayedDeck!: UnplayedDeck;
   private interactiveTable!: InteractiveTable;
   private players!: PlayerHand[];
+  private playedDeck!: PlayedDeck;
 
   private defendingPlayerId: number = 1;
   private maxCardsForThisTurn: number = 4;
@@ -50,6 +52,8 @@ export class CardsGameScene extends Phaser.Scene {
     this.add.tileSprite(0, 0, width, height, "background").setOrigin(0, 0);
 
     this.unplayedDeck = new UnplayedDeck(this, 200, height / 2);
+
+    this.playedDeck = new PlayedDeck(this, width - 200, height / 2);
 
     this.interactiveTable = new InteractiveTable({
       scene: this,
@@ -202,7 +206,9 @@ export class CardsGameScene extends Phaser.Scene {
       defender.addCards(newCards);
     }
 
-    this.interactiveTable.removeAllCards();
+    const removedCardsAmount = this.interactiveTable.removeAllCards();
+
+    this.playedDeck.addCards(removedCardsAmount);
 
     const switchRolesStep = penaltyCards > 0 ? 2 : 1;
     for (let i = 0; i < switchRolesStep; i++) {
