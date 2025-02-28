@@ -37,7 +37,7 @@ export class CardsGameScene extends Phaser.Scene {
 
     this.load.image("support", "/img/icons/support.svg");
     this.load.image("defender", "/img/icons/defender.svg");
-    this.load.image("attacker", "/img/icons/attacker.svg")
+    this.load.image("attacker", "/img/icons/attacker.svg");
 
     this.load.image("background", this.background.image);
   }
@@ -71,7 +71,7 @@ export class CardsGameScene extends Phaser.Scene {
         playerId: i,
       });
       playerHand.on("cardPlayed", this.handleCardPlayed, this);
-      playerHand.on("checkEndOfTurn", this.checkEndOfTurn, this);
+      playerHand.on("checkEndOfTurn", this.checkEndOfTurnByPass, this);
       tempPlayers.push(playerHand);
     }
     this.players = tempPlayers;
@@ -132,7 +132,7 @@ export class CardsGameScene extends Phaser.Scene {
       this.players[this.defendingPlayerId].cards.length;
   }
 
-  private checkEndOfTurn() {
+  private checkEndOfTurnByPass() {
     const isAllPlayersPassed = this.players.every((player) => player.isPassed);
 
     if (isAllPlayersPassed) {
@@ -140,11 +140,16 @@ export class CardsGameScene extends Phaser.Scene {
     }
   }
 
+  private checkEndOfTurnByDefenderAmountOfCards() {
+    const isDefenderOutOfCards =
+      this.players[this.defendingPlayerId].cards.length === 0;
+
+    if (isDefenderOutOfCards) {
+      this.endTurn();
+    }
+  }
+
   private endTurn() {
-    // Раздача карт
-    const attackers = this.players.filter(
-      (player) => player.role === ATTACKER || player.role === SUPPORT
-    );
     const defender = this.players[this.defendingPlayerId];
     const penaltyCards =
       this.interactiveTable.attackCardsDataOnTable.length -
@@ -156,12 +161,40 @@ export class CardsGameScene extends Phaser.Scene {
       const newCards = this.unplayedDeck.getCards(cardsToGive);
       defender.addCards(newCards);
     }
-    // Выдаём карты атакующим
-    for (const player of attackers) {
-      const cardsToGive = 4 - player.cards.length;
-      const newCards = this.unplayedDeck.getCards(cardsToGive);
-      player.addCards(newCards);
+
+    // Определяем порядок раздачи карт атакующему и подкидывающим игрокам
+    const attackersOrder: PlayerHand[] = [];
+
+    // Находим атакующего игрока
+    const attacker = this.players.find((player) => player.role === ATTACKER);
+    if (attacker) {
+      attackersOrder.push(attacker);
     }
+
+    // Находим подкидывающих игроков справа от защищающегося
+    let currentIndex = this.defendingPlayerId + 1;
+    while (attackersOrder.length < this.playersAmount - 1) {
+      // Переходим на начало списка, если вышли за его пределы
+      if (currentIndex >= this.playersAmount) {
+        currentIndex = 0;
+      }
+
+      const player = this.players[currentIndex];
+      if (player.role === SUPPORT) {
+        attackersOrder.push(player);
+      }
+
+      currentIndex++;
+    }
+    // Выдаём карты атакующему и подкидывающим
+    for (const player of attackersOrder) {
+      const cardsToGive = 4 - player.cards.length;
+      if (cardsToGive > 0) {
+        const newCards = this.unplayedDeck.getCards(cardsToGive);
+        player.addCards(newCards);
+      }
+    }
+
     // Выдаём карты защищающемуся, если штрафных карт не было
     if (penaltyCards === 0) {
       const cardsToGive = 4 - defender.cards.length;
@@ -218,6 +251,10 @@ export class CardsGameScene extends Phaser.Scene {
       this.players.forEach((player) => {
         player.setIsPassed(false, true);
       });
+
+      if (playerRole === DEFENDER) {
+        this.checkEndOfTurnByDefenderAmountOfCards();
+      }
     } else {
       player.returnCardToHand(card.id);
     }

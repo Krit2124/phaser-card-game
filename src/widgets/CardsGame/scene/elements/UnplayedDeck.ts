@@ -45,7 +45,7 @@ export default class UnplayedDeck extends Phaser.GameObjects.Container {
     for (let i = 0; i < amount; i++) {
       const newCard = this.localDeck.shift();
       if (newCard) {
-        cardsToGive.push(newCard)
+        cardsToGive.push(newCard);
       }
     }
     this.availableCardsText.setText(String(this.localDeck.length));
