@@ -7,6 +7,13 @@ const cardsOnTableSizes = {
   height: cardsSizes.height * 0.75,
 };
 
+interface InteractiveTableOptions {
+  scene: Phaser.Scene;
+  sceneWidth: number;
+  sceneHeight: number;
+  marginFromSceneBorders: number;
+}
+
 export default class InteractiveTable extends Phaser.GameObjects.Container {
   private tableBorders!: Phaser.GameObjects.Rectangle;
   private cardsPositions = this.calculateCardsPositions();
@@ -19,12 +26,12 @@ export default class InteractiveTable extends Phaser.GameObjects.Container {
   public defenseCardsOnTable: Phaser.GameObjects.Image[] = [];
   public defenseCardsDataOnTable: Card[] = [];
 
-  constructor(
-    scene: Phaser.Scene,
-    sceneWidth: number,
-    sceneHeight: number,
-    marginFromSceneBorders: number
-  ) {
+  constructor({
+    scene,
+    sceneWidth,
+    sceneHeight,
+    marginFromSceneBorders,
+  }: InteractiveTableOptions) {
     super(scene, sceneWidth / 2, sceneHeight / 2);
 
     this.width = sceneWidth;
@@ -39,18 +46,28 @@ export default class InteractiveTable extends Phaser.GameObjects.Container {
     scene.add.existing(this);
   }
 
-  public addAttackCard(card: Card): boolean {
+  public addAttackCard(newCard: Card): boolean {
     if (this.attackCardsOnTable.length >= 6) {
+      return false;
+    }
+
+    // Проверяем, можно ли добавить карту на стол
+    const isAddingLegal =
+      this.attackCardsOnTable.length === 0 ||
+      this.attackCardsDataOnTable.some((card) => card.rank === newCard.rank) ||
+      this.defenseCardsDataOnTable.some((card) => card.rank === newCard.rank);
+    
+    if (!isAddingLegal) {
       return false;
     }
 
     const cardPosition = this.cardsPositions[this.attackCardsOnTable.length];
     const tableCard = this.scene.add
-      .image(cardPosition.x, cardPosition.y, card.image)
+      .image(cardPosition.x, cardPosition.y, newCard.image)
       .setDisplaySize(cardsOnTableSizes.width, cardsOnTableSizes.height);
 
     this.attackCardsOnTable.push(tableCard);
-    this.attackCardsDataOnTable.push(card);
+    this.attackCardsDataOnTable.push(newCard);
     this.add(tableCard);
     return true;
   }
@@ -96,6 +113,10 @@ export default class InteractiveTable extends Phaser.GameObjects.Container {
     this.attackCardsOnTable.forEach((card) => card.destroy());
     this.attackCardsOnTable = [];
     this.attackCardsDataOnTable = [];
+
+    this.defenseCardsOnTable.forEach((card) => card.destroy());
+    this.defenseCardsOnTable = [];
+    this.defenseCardsDataOnTable = [];
   }
 
   // Получение сетки 3x2 для карт

@@ -47,35 +47,34 @@ export class CardsGameScene extends Phaser.Scene {
 
     this.unplayedDeck = new UnplayedDeck(this, 200, height / 2);
 
-    this.interactiveTable = new InteractiveTable(
-      this,
-      width,
-      height,
-      marginFromSceneBorders
-    );
+    this.interactiveTable = new InteractiveTable({
+      scene: this,
+      sceneWidth: width,
+      sceneHeight: height,
+      marginFromSceneBorders,
+    });
 
     const playersPositions = this.calculatePlayersPositions(width, height);
 
     // Временный массив для игроков, так как push в this.players вызывает ошибку
     const tempPlayers = [];
     for (let i = 0; i < this.playersAmount; i++) {
-      const playerHand = new PlayerHand(
-        this,
-        playersPositions[i].x,
-        playersPositions[i].y,
-        playersPositions[i].angle,
-        i
-      );
+      const playerHand = new PlayerHand({
+        scene: this,
+        x: playersPositions[i].x,
+        y: playersPositions[i].y,
+        angle: playersPositions[i].angle,
+        playerId: i,
+      });
       playerHand.on("cardPlayed", this.handleCardPlayed, this);
+      playerHand.on("checkEndOfTurn", this.checkEndOfTurn, this);
       tempPlayers.push(playerHand);
     }
     this.players = tempPlayers;
 
     for (let i = 0; i < this.playersAmount; i++) {
       const CardsForPlayer = this.unplayedDeck.getCards(4);
-      for (const card of CardsForPlayer) {
-        this.players[i].addCard(card);
-      }
+      this.players[i].addCards(CardsForPlayer);
     }
 
     this.startTurn();
@@ -84,12 +83,34 @@ export class CardsGameScene extends Phaser.Scene {
   update() {}
 
   private startTurn() {
-    // Распределение ролей игроков
-    const attackerId =
-      this.defendingPlayerId > 0
-        ? this.defendingPlayerId - 1
-        : this.playersAmount - 1;
+    // Проверяем, есть ли у кого-нибудь из игроков 3 карты одного ранга
+    const playerWithThreeCardsOfSameRank = this.players.find((player) => {
+      const ranks = player.cards.map((card) => card.rank);
+      const amountOfEachRank = new Map<number, number>();
+      ranks.forEach((rank) => {
+        amountOfEachRank.set(rank, (amountOfEachRank.get(rank) || 0) + 1);
+      });
+      return Array.from(amountOfEachRank.values()).some((value) => {
+        return value >= 3;
+      });
+    });
 
+    // Определение атакующего игрока
+    let attackerId: number;
+    if (playerWithThreeCardsOfSameRank) {
+      // Игрок с 3 картами одного ранга атакует, что переопределяет и защищающегося
+      attackerId = playerWithThreeCardsOfSameRank.playerId;
+      this.defendingPlayerId =
+        attackerId < this.playersAmount - 1 ? attackerId + 1 : 0;
+    } else {
+      // По обычным правилам: игрок перед атакующим
+      attackerId =
+        this.defendingPlayerId > 0
+          ? this.defendingPlayerId - 1
+          : this.playersAmount - 1;
+    }
+
+    // Распределение ролей остальных игроков
     this.players.forEach((player, index) => {
       if (index === this.defendingPlayerId) {
         this.players[this.defendingPlayerId].setRole(DEFENDER);
@@ -99,6 +120,7 @@ export class CardsGameScene extends Phaser.Scene {
         player.setRole(SUPPORT);
       }
       player.playedCardsOnTurn = 0;
+      player.setIsPassed(false, false);
     });
 
     // Максимум может разыграться столько карт, сколько есть у защищающегося
@@ -106,13 +128,53 @@ export class CardsGameScene extends Phaser.Scene {
       this.players[this.defendingPlayerId].cards.length;
   }
 
+  private checkEndOfTurn() {
+    const isAllPlayersPassed = this.players.every((player) => player.isPassed);
+
+    if (isAllPlayersPassed) {
+      this.endTurn();
+    }
+  }
+
   private endTurn() {
+    // Раздача карт
+    const attackers = this.players.filter(
+      (player) => player.role === ATTACKER || player.role === SUPPORT
+    );
+    const defender = this.players[this.defendingPlayerId];
+    const penaltyCards =
+      this.interactiveTable.attackCardsDataOnTable.length -
+      this.interactiveTable.defenseCardsDataOnTable.length;
+
+    // Если есть штрафные карты, то сначала выдаём карты защищающемуся
+    if (penaltyCards > 0) {
+      const cardsToGive = 4 - defender.cards.length + penaltyCards;
+      const newCards = this.unplayedDeck.getCards(cardsToGive);
+      defender.addCards(newCards);
+    }
+    // Выдаём карты атакующим
+    for (const player of attackers) {
+      const cardsToGive = 4 - player.cards.length;
+      const newCards = this.unplayedDeck.getCards(cardsToGive);
+      player.addCards(newCards);
+    }
+    // Выдаём карты защищающемуся, если штрафных карт не было
+    if (penaltyCards === 0) {
+      const cardsToGive = 4 - defender.cards.length;
+      const newCards = this.unplayedDeck.getCards(cardsToGive);
+      defender.addCards(newCards);
+    }
+
     this.interactiveTable.removeAllCards();
-    this.defendingPlayerId =
-      this.defendingPlayerId < this.playersAmount - 1
-        ? this.defendingPlayerId + 1
-        : 0;
-    // FIXME: добавить логику выдачи карт
+
+    const switchRolesStep = penaltyCards > 0 ? 2 : 1;
+    for (let i = 0; i < switchRolesStep; i++) {
+      this.defendingPlayerId =
+        this.defendingPlayerId < this.playersAmount - 1
+          ? this.defendingPlayerId + 1
+          : 0;
+    }
+
     this.startTurn();
   }
 
@@ -126,6 +188,7 @@ export class CardsGameScene extends Phaser.Scene {
     let isAdded = false;
     const player = this.players[playerId];
 
+    // Добавление карты на стол в зависимости от роли игрока
     if (
       playerRole === ATTACKER ||
       (playerRole === SUPPORT &&
@@ -142,9 +205,15 @@ export class CardsGameScene extends Phaser.Scene {
       isAdded = this.interactiveTable.addDefenseCard(card, x, y);
     }
 
+    // Если карту добавили на стол, то удаляем её из руки игрока, иначе возвращаем в руку
     if (isAdded) {
       player.playedCardsOnTurn += 1;
       player.removeCard(card.id);
+
+      // Возвращаем всем игрокам возможность пропустить ход
+      this.players.forEach((player) => {
+        player.setIsPassed(false, true);
+      });
     } else {
       player.returnCardToHand(card.id);
     }

@@ -2,8 +2,16 @@ import { Card } from "@/shared/types";
 import { cardsSizes } from "../../constants/cardsSizes";
 import { SUPPORT } from "../../constants/playerRoles";
 
+interface PlayerHandOptions {
+  scene: Phaser.Scene;
+  x: number;
+  y: number;
+  angle: number;
+  playerId: number;
+}
+
 export default class PlayerHand extends Phaser.GameObjects.Container {
-  private playerId: number;
+  public playerId: number;
   public role: string = SUPPORT;
 
   private cardOffsetX: number = 35; // Смещение по X между картами
@@ -18,19 +26,13 @@ export default class PlayerHand extends Phaser.GameObjects.Container {
   private passButton: Phaser.GameObjects.Text;
   public playedCardsOnTurn: number = 0;
 
-  constructor(
-    scene: Phaser.Scene,
-    x: number,
-    y: number,
-    angle: number,
-    playerId: number
-  ) {
+  constructor({ scene, x, y, angle, playerId }: PlayerHandOptions) {
     super(scene, x, y);
 
     this.playerId = playerId;
 
     this.passButton = this.scene.add
-      .text(0, -cardsSizes.height, "Пропустить ход", {
+      .text(0, -cardsSizes.height / 2 - 40, "Пропустить ход", {
         fontFamily: "Roboto",
         fontSize: "24px",
         color: "#ffffff",
@@ -40,7 +42,9 @@ export default class PlayerHand extends Phaser.GameObjects.Container {
       .setOrigin(0.5)
       .setInteractive({ cursor: "pointer" })
       .setVisible(true);
-    this.passButton.on("pointerdown", () => this.setIsPassed(true));
+    this.passButton.on("pointerdown", () =>
+      this.setIsPassed(true, false, true)
+    );
     this.add(this.passButton);
 
     scene.add.existing(this);
@@ -51,29 +55,36 @@ export default class PlayerHand extends Phaser.GameObjects.Container {
     this.role = role;
   }
 
-  public setIsPassed(isPassed: boolean) {
+  public setIsPassed(
+    isPassed: boolean,
+    isPassButtonVisible: boolean,
+    shouldCheckForEndOfTurn: boolean = false
+  ) {
     this.isPassed = isPassed;
-    this.passButton.setVisible(!isPassed);
+    this.passButton.setVisible(isPassButtonVisible);
+    if (shouldCheckForEndOfTurn) {
+      this.emit("checkEndOfTurn");
+    }
   }
 
-  public addCard(card: Card) {
-    this.cards = [...this.cards, card];
+  public addCards(newCards: Card[]) {
+    for (const card of newCards) {
+      this.cards = [...this.cards, card];
 
-    const cardImage = this.scene.add
-      .image(0, 0, card.image)
-      .setDisplaySize(cardsSizes.width, cardsSizes.height)
-      .setInteractive({ cursor: "pointer" });
-    this.add(cardImage);
-    this.cardsImages.push(cardImage);
+      const cardImage = this.scene.add
+        .image(0, 0, card.image)
+        .setDisplaySize(cardsSizes.width, cardsSizes.height)
+        .setInteractive({ cursor: "pointer" });
+      this.add(cardImage);
+      this.cardsImages.push(cardImage);
 
-    this.initialCardPositions.push({ x: this.x, y: this.y });
+      this.initialCardPositions.push({ x: this.x, y: this.y });
 
-    this.scene.input.setDraggable(cardImage);
-    this.setupCardDragEvents(cardImage, card.id);
+      this.scene.input.setDraggable(cardImage);
+      this.setupCardDragEvents(cardImage, card.id);
+    }
 
     this.updateCardsPositions();
-
-    this.scene.add.existing(this);
   }
 
   public removeCard(id: number) {

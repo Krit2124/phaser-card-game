@@ -1,9 +1,9 @@
 import { deck28 } from "@/shared/constants";
 import { cardsSizes } from "../../constants/cardsSizes";
+import { Card } from "@/shared/types";
 
 export default class UnplayedDeck extends Phaser.GameObjects.Container {
-  public availableCards = 28;
-  private localDeck = deck28;
+  public localDeck = deck28;
 
   private deckImage: Phaser.GameObjects.Image;
   private availableCardsText!: Phaser.GameObjects.Text;
@@ -23,7 +23,7 @@ export default class UnplayedDeck extends Phaser.GameObjects.Container {
     this.add(this.availableCardsBackground);
 
     this.availableCardsText = this.scene.add
-      .text(0, 0, String(this.availableCards), {
+      .text(0, 0, String(this.localDeck.length), {
         fontSize: "64px",
         fontFamily: "Roboto",
         fontStyle: "bold",
@@ -41,8 +41,14 @@ export default class UnplayedDeck extends Phaser.GameObjects.Container {
   }
 
   public getCards(amount: number) {
-    this.availableCards -= amount;
-    this.availableCardsText.setText(String(this.availableCards));
-    return this.localDeck.splice(0, amount);
+    const cardsToGive: Card[] = [];
+    for (let i = 0; i < amount; i++) {
+      const newCard = this.localDeck.shift();
+      if (newCard) {
+        cardsToGive.push(newCard)
+      }
+    }
+    this.availableCardsText.setText(String(this.localDeck.length));
+    return cardsToGive;
   }
 }
