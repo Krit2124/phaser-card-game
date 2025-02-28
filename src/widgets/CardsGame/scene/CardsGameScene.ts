@@ -35,6 +35,10 @@ export class CardsGameScene extends Phaser.Scene {
     });
     this.load.image("card_back", "/img/deck/card_back.png");
 
+    this.load.image("support", "/img/icons/support.svg");
+    this.load.image("defender", "/img/icons/defender.svg");
+    this.load.image("attacker", "/img/icons/attacker.svg")
+
     this.load.image("background", this.background.image);
   }
 
@@ -148,7 +152,7 @@ export class CardsGameScene extends Phaser.Scene {
 
     // Если есть штрафные карты, то сначала выдаём карты защищающемуся
     if (penaltyCards > 0) {
-      const cardsToGive = 4 - defender.cards.length + penaltyCards;
+      const cardsToGive = Math.max(4 - defender.cards.length, 0) + penaltyCards;
       const newCards = this.unplayedDeck.getCards(cardsToGive);
       defender.addCards(newCards);
     }

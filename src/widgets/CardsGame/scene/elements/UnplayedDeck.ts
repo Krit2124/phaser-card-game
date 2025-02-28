@@ -18,7 +18,7 @@ export default class UnplayedDeck extends Phaser.GameObjects.Container {
     this.add(this.deckImage);
 
     this.availableCardsBackground = scene.add
-      .circle(0, 0, 50, 0x353535)
+      .circle(0, 0, 50, 0x000000)
       .setStrokeStyle(5, 0xffffff);
     this.add(this.availableCardsBackground);
 

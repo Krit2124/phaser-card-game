@@ -12,7 +12,10 @@ interface PlayerHandOptions {
 
 export default class PlayerHand extends Phaser.GameObjects.Container {
   public playerId: number;
+
   public role: string = SUPPORT;
+  private roleIcon!: Phaser.GameObjects.Image;
+  private roleIconBackground!: Phaser.GameObjects.Arc;
 
   private cardOffsetX: number = 35; // Смещение по X между картами
   private cardOffsetY: number = 4; // Смещение по Y между картами
@@ -31,8 +34,11 @@ export default class PlayerHand extends Phaser.GameObjects.Container {
 
     this.playerId = playerId;
 
+    const upperElementsOffsetX = 70
+    const upperElementsOffsetY = -cardsSizes.height / 2 - 30
+
     this.passButton = this.scene.add
-      .text(0, -cardsSizes.height / 2 - 40, "Пропустить ход", {
+      .text(-upperElementsOffsetX, upperElementsOffsetY, "Пропустить ход", {
         fontFamily: "Roboto",
         fontSize: "24px",
         color: "#ffffff",
@@ -41,11 +47,23 @@ export default class PlayerHand extends Phaser.GameObjects.Container {
       })
       .setOrigin(0.5)
       .setInteractive({ cursor: "pointer" })
-      .setVisible(true);
+      .setVisible(true)
+      .setRotation(angle);
     this.passButton.on("pointerdown", () =>
       this.setIsPassed(true, false, true)
     );
     this.add(this.passButton);
+
+    this.roleIconBackground = scene.add
+      .circle(upperElementsOffsetX, upperElementsOffsetY, 25, 0x000000)
+      .setStrokeStyle(3, 0xffffff);
+    this.add(this.roleIconBackground);
+
+    this.roleIcon = this.scene.add
+      .image(upperElementsOffsetX, upperElementsOffsetY, this.role)
+      .setScale(0.2)
+      .setRotation(angle);
+    this.add(this.roleIcon);
 
     scene.add.existing(this);
     this.rotation = angle;
@@ -53,6 +71,7 @@ export default class PlayerHand extends Phaser.GameObjects.Container {
 
   public setRole(role: string) {
     this.role = role;
+    this.roleIcon.setTexture(role);
   }
 
   public setIsPassed(
