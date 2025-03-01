@@ -7,6 +7,7 @@ import { cardsSizes } from "../constants/cardsSizes";
 import PlayerHand from "./elements/PlayerHand";
 import { ATTACKER, DEFENDER, SUPPORT } from "../constants/playerRoles";
 import PlayedDeck from "./elements/PlayedDeck";
+import RestartButton from "./elements/restartButton";
 
 interface CardsGameSceneConfig {
   playersAmount: number;
@@ -21,6 +22,7 @@ export class CardsGameScene extends Phaser.Scene {
   private interactiveTable!: InteractiveTable;
   private players!: PlayerHand[];
   private playedDeck!: PlayedDeck;
+  private restartButton!: RestartButton;
 
   private defendingPlayerId: number = 1;
   private maxCardsForThisTurn: number = 4;
@@ -42,6 +44,7 @@ export class CardsGameScene extends Phaser.Scene {
     this.load.image("attacker", "/img/icons/attacker.svg");
 
     this.load.image("crown", "/img/icons/crown.svg");
+    this.load.image("restart", "/img/icons/restart.svg");
 
     this.load.image("background", this.background.image);
   }
@@ -87,10 +90,13 @@ export class CardsGameScene extends Phaser.Scene {
       this.players[i].addCards(CardsForPlayer);
     }
 
-    this.startTurn();
-  }
+    this.restartButton = new RestartButton({
+      scene: this,
+      restartFunction: () => this.restartGame(),
+    });
 
-  update() {}
+    this.startTurn()
+  }
 
   private startTurn() {
     // Поиск игрока с тремя картами одного ранга
@@ -268,7 +274,14 @@ export class CardsGameScene extends Phaser.Scene {
   }
 
   private endGame() {
-    this.scene.pause();
+    // Блокируем возможность класть карты дальше
+    this.interactiveTable.isGameOver = true;
+
+    this.restartButton.setButtonVisible(true);
+  }
+
+  private restartGame() {
+    this.scene.restart();
   }
 
   private handleCardPlayed(

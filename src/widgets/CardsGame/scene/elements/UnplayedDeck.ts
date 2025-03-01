@@ -3,7 +3,8 @@ import { cardsSizes } from "../../constants/cardsSizes";
 import { Card } from "@/shared/types";
 
 export default class UnplayedDeck extends Phaser.GameObjects.Container {
-  public localDeck = deck28;
+  // Глубокая копия массива с картами
+  public localDeck = JSON.parse(JSON.stringify(deck28));
 
   private deckImage: Phaser.GameObjects.Image;
   private availableCardsText!: Phaser.GameObjects.Text;

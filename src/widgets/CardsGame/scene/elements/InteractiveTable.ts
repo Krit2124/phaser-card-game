@@ -26,6 +26,9 @@ export default class InteractiveTable extends Phaser.GameObjects.Container {
   public defenseCardsOnTable: Phaser.GameObjects.Image[] = [];
   public defenseCardsDataOnTable: Card[] = [];
 
+  // Флаг, блокирующий возможность добавлять карты на стол
+  public isGameOver = false;
+
   constructor({
     scene,
     sceneWidth,
@@ -47,7 +50,7 @@ export default class InteractiveTable extends Phaser.GameObjects.Container {
   }
 
   public addAttackCard(newCard: Card): boolean {
-    if (this.attackCardsOnTable.length >= 6) {
+    if (this.attackCardsOnTable.length >= 6 || this.isGameOver) {
       return false;
     }
 
@@ -73,6 +76,10 @@ export default class InteractiveTable extends Phaser.GameObjects.Container {
   }
 
   public addDefenseCard(defenseCard: Card, x: number, y: number): boolean {
+    if (this.isGameOver) {
+      return false;
+    }
+
     // Ищем карту, на которую навёлся игрок
     const cardToBeatImage = this.attackCardsOnTable.find((card) =>
       card.getBounds().contains(x, y)
