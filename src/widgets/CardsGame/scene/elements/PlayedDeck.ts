@@ -12,7 +12,7 @@ export default class PlayedDeck extends Phaser.GameObjects.Container {
 
     this.playedCardsBackground = scene.add
       .circle(0, 0, 50, 0x000000)
-      .setStrokeStyle(5, 0xffffff)
+      .setStrokeStyle(5, 0x8f0101)
       .setVisible(false);
     this.add(this.playedCardsBackground);
 

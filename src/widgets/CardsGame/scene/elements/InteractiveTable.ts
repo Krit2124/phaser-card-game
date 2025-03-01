@@ -41,8 +41,7 @@ export default class InteractiveTable extends Phaser.GameObjects.Container {
     this.height = sceneHeight - marginFromSceneBorders * 2;
 
     this.tableBorders = scene.add
-      .rectangle(0, 0, this.width, this.height)
-      .setStrokeStyle(5, 0xff0000);
+      .rectangle(0, 0, this.width, this.height);
     this.add(this.tableBorders);
 
     this.setName("interactiveTable");

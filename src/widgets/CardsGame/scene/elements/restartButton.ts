@@ -15,7 +15,7 @@ export default class RestartButton extends Phaser.GameObjects.Container {
 
     this.restartButton = scene.add
       .circle(sceneWidth / 2, sceneHeight / 2, 150, 0x000000)
-      .setStrokeStyle(6, 0xffffff)
+      .setStrokeStyle(6, 0x8f0101)
       .setInteractive({ useHandCursor: true })
       .setVisible(false);
     this.restartButton.on("pointerdown", restartFunction);

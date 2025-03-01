@@ -189,6 +189,12 @@ export class CardsGameScene extends Phaser.Scene {
   }
 
   private endTurn() {
+    // Убираем возможность окончить ход у всех игроков
+    // * Именно здесь, чтобы в конце игры не оставались кнопки "Пропустить ход"
+    this.players.forEach((player) => {
+      player.setIsPassed(false, false);
+    });
+
     const defender = this.players[this.defendingPlayerId];
     const penaltyCards =
       this.interactiveTable.attackCardsDataOnTable.length -

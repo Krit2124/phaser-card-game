@@ -22,7 +22,8 @@ export default class PlayerHand extends Phaser.GameObjects.Container {
   private initialCardPositions: { x: number; y: number }[] = [];
 
   public isPassed: boolean = false;
-  private passButton: Phaser.GameObjects.Text;
+  private passButton!: Phaser.GameObjects.Text;
+  private passButtonBackground!: Phaser.GameObjects.Rectangle;
   public playedCardsOnTurn: number = 0;
 
   public isWinner: boolean = false;
@@ -34,29 +35,36 @@ export default class PlayerHand extends Phaser.GameObjects.Container {
 
     this.playerId = playerId;
 
-    const upperElementsOffsetX = 70
-    const upperElementsOffsetY = -cardsSizes.height / 2 - 30
+    const upperElementsOffsetX = 70;
+    const upperElementsOffsetY = -cardsSizes.height / 2 - 40;
+
+    this.passButtonBackground = this.scene.add
+      .rectangle(-upperElementsOffsetX, upperElementsOffsetY, 200, 40, 0x000000)
+      .setStrokeStyle(2, 0x8f0101)
+      .setOrigin(0.5)
+      .setInteractive({ cursor: "pointer" })
+      .setVisible(false);
+    this.add(this.passButtonBackground);
 
     this.passButton = this.scene.add
       .text(-upperElementsOffsetX, upperElementsOffsetY, "Пропустить ход", {
         fontFamily: "Roboto",
         fontSize: "24px",
         color: "#ffffff",
-        backgroundColor: "#000000",
-        padding: { x: 10, y: 5 },
       })
       .setOrigin(0.5)
-      .setInteractive({ cursor: "pointer" })
-      .setVisible(false)
-      .setRotation(angle);
-    this.passButton.on("pointerdown", () =>
+      .setVisible(false);
+
+    this.add(this.passButton);
+
+    // Обработчик события нажатия на кнопку
+    this.passButtonBackground.on("pointerdown", () =>
       this.setIsPassed(true, false, true)
     );
-    this.add(this.passButton);
 
     this.roleIconBackground = scene.add
       .circle(upperElementsOffsetX, upperElementsOffsetY, 25, 0x000000)
-      .setStrokeStyle(3, 0xffffff);
+      .setStrokeStyle(3, 0x8f0101);
     this.add(this.roleIconBackground);
 
     this.roleIcon = this.scene.add
@@ -67,7 +75,7 @@ export default class PlayerHand extends Phaser.GameObjects.Container {
 
     this.winnerIconBackground = scene.add
       .circle(0, -150, 100, 0x000000)
-      .setStrokeStyle(6, 0xffffff)
+      .setStrokeStyle(6, 0x8f0101)
       .setVisible(false);
     this.add(this.winnerIconBackground);
 
@@ -94,6 +102,7 @@ export default class PlayerHand extends Phaser.GameObjects.Container {
   ) {
     this.isPassed = isPassed;
     this.passButton.setVisible(isPassButtonVisible);
+    this.passButtonBackground.setVisible(isPassButtonVisible);
     if (shouldCheckForEndOfTurn) {
       this.emit("checkEndOfTurn");
     }
