@@ -17,10 +17,6 @@ export default class PlayerHand extends Phaser.GameObjects.Container {
   private roleIcon!: Phaser.GameObjects.Image;
   private roleIconBackground!: Phaser.GameObjects.Arc;
 
-  private cardOffsetX: number = 35; // Смещение по X между картами
-  private cardOffsetY: number = 4; // Смещение по Y между картами
-  private cardRotation: number = 0.08; // Угол поворота карт (в радианах)
-
   public cards: Card[] = [];
   private cardsImages: Phaser.GameObjects.Image[] = [];
   private initialCardPositions: { x: number; y: number }[] = [];
@@ -28,6 +24,10 @@ export default class PlayerHand extends Phaser.GameObjects.Container {
   public isPassed: boolean = false;
   private passButton: Phaser.GameObjects.Text;
   public playedCardsOnTurn: number = 0;
+
+  public isWinner: boolean = false;
+  private winnerIcon!: Phaser.GameObjects.Image;
+  private winnerIconBackground!: Phaser.GameObjects.Arc;
 
   constructor({ scene, x, y, angle, playerId }: PlayerHandOptions) {
     super(scene, x, y);
@@ -47,7 +47,7 @@ export default class PlayerHand extends Phaser.GameObjects.Container {
       })
       .setOrigin(0.5)
       .setInteractive({ cursor: "pointer" })
-      .setVisible(true)
+      .setVisible(false)
       .setRotation(angle);
     this.passButton.on("pointerdown", () =>
       this.setIsPassed(true, false, true)
@@ -64,6 +64,19 @@ export default class PlayerHand extends Phaser.GameObjects.Container {
       .setScale(0.2)
       .setRotation(angle);
     this.add(this.roleIcon);
+
+    this.winnerIconBackground = scene.add
+      .circle(0, -150, 100, 0x000000)
+      .setStrokeStyle(6, 0xffffff)
+      .setVisible(false);
+    this.add(this.winnerIconBackground);
+
+    this.winnerIcon = this.scene.add
+      .image(0, -150, "crown")
+      .setScale(0.8)
+      .setRotation(angle)
+      .setVisible(false);
+    this.add(this.winnerIcon);
 
     scene.add.existing(this);
     this.rotation = angle;
@@ -84,6 +97,15 @@ export default class PlayerHand extends Phaser.GameObjects.Container {
     if (shouldCheckForEndOfTurn) {
       this.emit("checkEndOfTurn");
     }
+  }
+
+  public setWinner(isWinner: boolean = true) {
+    this.isWinner = isWinner;
+    this.winnerIconBackground.setVisible(isWinner);
+    this.winnerIcon.setVisible(isWinner);
+
+    this.bringToTop(this.winnerIconBackground);
+    this.bringToTop(this.winnerIcon);
   }
 
   public addCards(newCards: Card[]) {
@@ -120,7 +142,7 @@ export default class PlayerHand extends Phaser.GameObjects.Container {
   private setupCardDragEvents(cardImage: Phaser.GameObjects.Image, id: number) {
     cardImage.on(
       "drag",
-      (pointer: Phaser.Input.Pointer, dragX: number, dragY: number) => {
+      (_pointer: Phaser.Input.Pointer, dragX: number, dragY: number) => {
         cardImage.x = dragX;
         cardImage.y = dragY;
       }
@@ -162,17 +184,21 @@ export default class PlayerHand extends Phaser.GameObjects.Container {
   }
 
   private updateCardsPositions() {
+    const cardOffsetX = 35; // Смещение по X между картами
+    const cardOffsetY = 4; // Смещение по Y между картами
+    const cardRotation = 0.08; // Угол поворота карт (в радианах)
+
     const totalCards = this.cards.length;
 
-    const startX = -((totalCards - 1) * this.cardOffsetX) / 2;
-    const startY = -((totalCards - 1) * this.cardOffsetY) / 2;
+    const startX = -((totalCards - 1) * cardOffsetX) / 2;
+    const startY = -((totalCards - 1) * cardOffsetY) / 2;
 
     this.cardsImages.forEach((card, index) => {
-      const x = startX + index * this.cardOffsetX;
-      const y = startY + index * this.cardOffsetY;
+      const x = startX + index * cardOffsetX;
+      const y = startY + index * cardOffsetY;
 
       const rotation =
-        -((totalCards - 1) / 2) * this.cardRotation + index * this.cardRotation;
+        -((totalCards - 1) / 2) * cardRotation + index * cardRotation;
 
       card.setPosition(x, y);
       card.setRotation(rotation);

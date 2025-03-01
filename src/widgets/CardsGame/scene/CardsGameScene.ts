@@ -41,6 +41,8 @@ export class CardsGameScene extends Phaser.Scene {
     this.load.image("defender", "/img/icons/defender.svg");
     this.load.image("attacker", "/img/icons/attacker.svg");
 
+    this.load.image("crown", "/img/icons/crown.svg");
+
     this.load.image("background", this.background.image);
   }
 
@@ -96,7 +98,7 @@ export class CardsGameScene extends Phaser.Scene {
     let playerWithThreeCardsOfSameRank: {
       playerId: number;
       rank: number;
-    } = {playerId: -1, rank: -1};
+    } = { playerId: -1, rank: -1 };
 
     this.players.forEach((player) => {
       const ranks = player.cards.map((card) => card.rank);
@@ -245,7 +247,28 @@ export class CardsGameScene extends Phaser.Scene {
           : 0;
     }
 
-    this.startTurn();
+    const isThereWinners = this.checkWinners();
+
+    if (isThereWinners) {
+      this.endGame();
+    } else {
+      this.startTurn();
+    }
+  }
+
+  private checkWinners(): boolean {
+    let isThereWinners = false;
+    this.players.forEach((player) => {
+      if (player.cards.length === 0) {
+        player.setWinner(true);
+        isThereWinners = true;
+      }
+    });
+    return isThereWinners;
+  }
+
+  private endGame() {
+    this.scene.pause();
   }
 
   private handleCardPlayed(
