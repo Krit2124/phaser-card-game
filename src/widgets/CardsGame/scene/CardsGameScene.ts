@@ -91,21 +91,48 @@ export class CardsGameScene extends Phaser.Scene {
   update() {}
 
   private startTurn() {
-    // Проверяем, есть ли у кого-нибудь из игроков 3 карты одного ранга
-    const playerWithThreeCardsOfSameRank = this.players.find((player) => {
+    // Поиск игрока с тремя картами одного ранга
+    // Если их несколько, то выбираем того, у кого эти карты наибольшего ранга
+    let playerWithThreeCardsOfSameRank: {
+      playerId: number;
+      rank: number;
+    } = {playerId: -1, rank: -1};
+
+    this.players.forEach((player) => {
       const ranks = player.cards.map((card) => card.rank);
-      const amountOfEachRank = new Map<number, number>();
+
+      // Количество карт каждого ранга
+      const rankCounts = new Map<number, number>();
       ranks.forEach((rank) => {
-        amountOfEachRank.set(rank, (amountOfEachRank.get(rank) || 0) + 1);
+        rankCounts.set(rank, (rankCounts.get(rank) || 0) + 1);
       });
-      return Array.from(amountOfEachRank.values()).some((value) => {
-        return value >= 3;
+
+      // Максимальный ранг, у которого есть хотя бы три карты
+      let maxRankForPlayer = -1;
+      rankCounts.forEach((count, rank) => {
+        if (count >= 3 && rank > maxRankForPlayer) {
+          maxRankForPlayer = rank;
+        }
       });
+
+      // Если у игрока есть три карты одного ранга,
+      // сравниваем с текущим максимальным
+      if (maxRankForPlayer !== -1) {
+        if (
+          !playerWithThreeCardsOfSameRank ||
+          maxRankForPlayer > playerWithThreeCardsOfSameRank.rank
+        ) {
+          playerWithThreeCardsOfSameRank = {
+            playerId: player.playerId,
+            rank: maxRankForPlayer,
+          };
+        }
+      }
     });
 
     // Определение атакующего игрока
     let attackerId: number;
-    if (playerWithThreeCardsOfSameRank) {
+    if (playerWithThreeCardsOfSameRank.playerId !== -1) {
       // Игрок с 3 картами одного ранга атакует, что переопределяет и защищающегося
       attackerId = playerWithThreeCardsOfSameRank.playerId;
       this.defendingPlayerId =
