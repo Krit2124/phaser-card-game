@@ -1,15 +1,12 @@
-import { Link } from "react-router-dom";
-
 import styles from "./ErrorPage.module.css";
+import { DefaultTextButton } from "@/shared/ui";
 
 const ErrorPage = () => {
   return (
     <section>
       <div className={styles.page}>
         <h1>Произошла неожиданная ошибка</h1>
-        <Link to="#" onClick={() => window.history.back()}>
-          Вернуться назад
-        </Link>
+        <DefaultTextButton text="Вернуться назад" onClick={() => window.history.back()} />
       </div>
     </section>
   );
