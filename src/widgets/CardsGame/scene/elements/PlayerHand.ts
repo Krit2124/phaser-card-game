@@ -40,7 +40,7 @@ export default class PlayerHand extends Phaser.GameObjects.Container {
 
     this.passButtonBackground = this.scene.add
       .rectangle(-upperElementsOffsetX, upperElementsOffsetY, 200, 40, 0x000000)
-      .setStrokeStyle(2, 0x8f0101)
+      .setStrokeStyle(2, 0x770000)
       .setOrigin(0.5)
       .setInteractive({ cursor: "pointer" })
       .setVisible(false);
@@ -64,7 +64,7 @@ export default class PlayerHand extends Phaser.GameObjects.Container {
 
     this.roleIconBackground = scene.add
       .circle(upperElementsOffsetX, upperElementsOffsetY, 25, 0x000000)
-      .setStrokeStyle(3, 0x8f0101);
+      .setStrokeStyle(3, 0x770000);
     this.add(this.roleIconBackground);
 
     this.roleIcon = this.scene.add
@@ -75,7 +75,7 @@ export default class PlayerHand extends Phaser.GameObjects.Container {
 
     this.winnerIconBackground = scene.add
       .circle(0, -150, 100, 0x000000)
-      .setStrokeStyle(6, 0x8f0101)
+      .setStrokeStyle(6, 0x770000)
       .setVisible(false);
     this.add(this.winnerIconBackground);
 

@@ -1,6 +1,6 @@
 .container {
   background-color: black;
-  border: 3px solid #8f0101;
+  border: 3px solid var(--red-dark);
   border-radius: 15px;
   padding: 20px;
   width: max-content;

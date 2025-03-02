@@ -1,6 +1,6 @@
 .defaultButton {
   background-color: black;
-  border: 3px solid #8f0101;
+  border: 3px solid var(--red-dark);
   color: white;
   border-radius: 100px;
   padding: 10px 15px;
@@ -14,6 +14,10 @@
 }
 
 .defaultButton:disabled {
-  background-color: var(--brown-dark);
+  border-color: var(--gray-pale);
   cursor: default !important;
+}
+
+.defaultButton:disabled:hover {
+  background-color: black;
 }

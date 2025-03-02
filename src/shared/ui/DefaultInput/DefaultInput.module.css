@@ -1,6 +1,6 @@
 .defaultInput {
   background-color: black;
-  border: 3px solid #8f0101;
+  border: 3px solid var(--red-dark);
   color: white;
   border-radius: 100px;
   padding: 10px 15px;
@@ -9,6 +9,6 @@
   font-weight: bolder;
 }
 
-.defaultInput:hover {
+.defaultInput:hover, .defaultInput:focus {
   background-color: var(--gray-pale);
 }

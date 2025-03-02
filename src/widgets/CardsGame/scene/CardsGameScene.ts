@@ -7,7 +7,7 @@ import { cardsSizes } from "../constants/cardsSizes";
 import PlayerHand from "./elements/PlayerHand";
 import { ATTACKER, DEFENDER, SUPPORT } from "../constants/playerRoles";
 import PlayedDeck from "./elements/PlayedDeck";
-import RestartButton from "./elements/restartButton";
+import RestartButton from "./elements/RestartButton";
 
 interface CardsGameSceneConfig {
   playersAmount: number;
