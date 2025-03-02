@@ -7,7 +7,12 @@ import { cardsSizes } from "../constants/cardsSizes";
 import PlayerHand from "./elements/PlayerHand";
 import { ATTACKER, DEFENDER, SUPPORT } from "../constants/playerRoles";
 import PlayedDeck from "./elements/PlayedDeck";
-import RestartButton from "./elements/RestartButton";
+import RestartButton from "./ui/RestartButton";
+import {
+  findNextPlayerIndex,
+  findPrevPlayerIndex,
+} from "../lib/findNextOrPrevPlayer";
+import { calculatePlayersPositions } from "../lib/calculatePlayersPosition";
 
 interface CardsGameSceneConfig {
   playersAmount: number;
@@ -17,15 +22,26 @@ interface CardsGameSceneConfig {
 export class CardsGameScene extends Phaser.Scene {
   private playersAmount: number;
   private background: SceneBackground;
+  private backgroundTileSprite!: Phaser.GameObjects.TileSprite;
 
   private unplayedDeck!: UnplayedDeck;
   private interactiveTable!: InteractiveTable;
-  private players!: PlayerHand[];
+  private players: PlayerHand[] = [];
   private playedDeck!: PlayedDeck;
   private restartButton!: RestartButton;
 
   private defendingPlayerId: number = 1;
   private maxCardsForThisTurn: number = 4;
+
+  // Максимальное количество карт на руке при нормальных условиях
+  private normalCardsAmountOnHand: number = 4;
+
+  // Массив с рангами карт, которые уже дали какому-либо игроку дополнительный ход
+  private cardRanksUsedForExtraTurn: number[] = [];
+  private playerWithExtraTurnByCardRanks: {
+    playerId: number;
+    rank: number;
+  } = { playerId: -1, rank: -1 };
 
   constructor(config: CardsGameSceneConfig) {
     super("CardsGameScene");
@@ -51,25 +67,29 @@ export class CardsGameScene extends Phaser.Scene {
 
   create() {
     const { width, height } = this.scale;
-    // Для отступов по краям берём половину карточки и ещё немного
-    const marginFromSceneBorders = cardsSizes.height * 0.75;
 
-    this.add.tileSprite(0, 0, width, height, "background").setOrigin(0, 0);
+    this.backgroundTileSprite = this.add.tileSprite(0, 0, width, height, "background")
+    .setOrigin(0, 0)
+    .setDepth(-1);
 
     this.unplayedDeck = new UnplayedDeck(this, 200, height / 2);
 
     this.playedDeck = new PlayedDeck(this, width - 200, height / 2);
 
+    // Отступы для интерактивного стола
+    const marginFromSceneBorders = cardsSizes.height * 0.75;
     this.interactiveTable = new InteractiveTable({
       scene: this,
-      sceneWidth: width,
-      sceneHeight: height,
       marginFromSceneBorders,
     });
 
-    const playersPositions = this.calculatePlayersPositions(width, height);
+    const playersPositions = calculatePlayersPositions(
+      this.playersAmount,
+      width,
+      height
+    );
 
-    // Временный массив для игроков, так как push в this.players вызывает ошибку
+    // Временный массив для игроков, так как push в this.players вызывает ошибки при перезагрузке игры
     const tempPlayers = [];
     for (let i = 0; i < this.playersAmount; i++) {
       const playerHand = new PlayerHand({
@@ -85,75 +105,76 @@ export class CardsGameScene extends Phaser.Scene {
     }
     this.players = tempPlayers;
 
+    // Раздача карт игрокам
     for (let i = 0; i < this.playersAmount; i++) {
-      const CardsForPlayer = this.unplayedDeck.getCards(4);
+      const CardsForPlayer = this.unplayedDeck.getCards(
+        this.normalCardsAmountOnHand
+      );
       this.players[i].addCards(CardsForPlayer);
     }
 
     this.restartButton = new RestartButton({
       scene: this,
-      restartFunction: () => this.restartGame(),
+      restartFunction: () => this.scene.restart(),
     });
 
-    this.startTurn()
+    this.startTurn();
+
+    window.addEventListener("resize", () => {
+      this.resizeCanvasAndReplaceElements();
+    });
   }
 
-  private startTurn() {
-    // Поиск игрока с тремя картами одного ранга
-    // Если их несколько, то выбираем того, у кого эти карты наибольшего ранга
-    let playerWithThreeCardsOfSameRank: {
-      playerId: number;
-      rank: number;
-    } = { playerId: -1, rank: -1 };
+  private findPlayerWithThreeCardsOfSameRank() {
+    // Поиск игроков с тремя картами одного ранга
+    // Если есть несколько игроков с тремя картами одного ранга, выбираем того, у кого ранг этих карт выше
+    this.playerWithExtraTurnByCardRanks = this.players.reduce(
+      (result, player) => {
+        const rankCounts = player.cards.reduce((counts, card) => {
+          counts[card.rank] = (counts[card.rank] || 0) + 1;
+          return counts;
+        }, {} as Record<number, number>);
 
-    this.players.forEach((player) => {
-      const ranks = player.cards.map((card) => card.rank);
+        const maxRank = Object.entries(rankCounts)
+          .filter(([, count]) => count >= 3)
+          .map(([rank]) => Number(rank))
+          .sort((a, b) => b - a)[0];
 
-      // Количество карт каждого ранга
-      const rankCounts = new Map<number, number>();
-      ranks.forEach((rank) => {
-        rankCounts.set(rank, (rankCounts.get(rank) || 0) + 1);
-      });
-
-      // Максимальный ранг, у которого есть хотя бы три карты
-      let maxRankForPlayer = -1;
-      rankCounts.forEach((count, rank) => {
-        if (count >= 3 && rank > maxRankForPlayer) {
-          maxRankForPlayer = rank;
+        if (maxRank && !this.cardRanksUsedForExtraTurn.includes(maxRank)) {
+          if (!result || maxRank > result.rank) {
+            return { playerId: player.playerId, rank: maxRank };
+          }
         }
-      });
+        return result;
+      },
+      { playerId: -1, rank: -1 }
+    );
+  }
 
-      // Если у игрока есть три карты одного ранга,
-      // сравниваем с текущим максимальным
-      if (maxRankForPlayer !== -1) {
-        if (
-          !playerWithThreeCardsOfSameRank ||
-          maxRankForPlayer > playerWithThreeCardsOfSameRank.rank
-        ) {
-          playerWithThreeCardsOfSameRank = {
-            playerId: player.playerId,
-            rank: maxRankForPlayer,
-          };
-        }
-      }
-    });
-
+  private setPlayersRolesForTurnByDefenderId() {
     // Определение атакующего игрока
     let attackerId: number;
-    if (playerWithThreeCardsOfSameRank.playerId !== -1) {
-      // Игрок с 3 картами одного ранга атакует, что переопределяет и защищающегося
-      attackerId = playerWithThreeCardsOfSameRank.playerId;
-      this.defendingPlayerId =
-        attackerId < this.playersAmount - 1 ? attackerId + 1 : 0;
+    if (this.playerWithExtraTurnByCardRanks.playerId !== -1) {
+      // Игрок с 3 картами одного ранга атакует вне очереди, что переопределяет и защищающегося
+      attackerId = this.playerWithExtraTurnByCardRanks.playerId;
+      this.defendingPlayerId = findNextPlayerIndex(
+        this.playersAmount,
+        attackerId
+      );
+
+      this.cardRanksUsedForExtraTurn.push(
+        this.playerWithExtraTurnByCardRanks.rank
+      );
     } else {
-      // По обычным правилам: игрок перед атакующим
-      attackerId =
-        this.defendingPlayerId > 0
-          ? this.defendingPlayerId - 1
-          : this.playersAmount - 1;
+      // По обычным правилам: игрок перед защищающимся атакует
+      attackerId = findPrevPlayerIndex(
+        this.playersAmount,
+        this.defendingPlayerId
+      );
     }
 
-    // Распределение ролей остальных игроков
+    // Распределение ролей остальных игроков и сброс значений
+    // количества разыгранных карт на руке и статуса пропуска хода
     this.players.forEach((player, index) => {
       if (index === this.defendingPlayerId) {
         this.players[this.defendingPlayerId].setRole(DEFENDER);
@@ -165,6 +186,12 @@ export class CardsGameScene extends Phaser.Scene {
       player.playedCardsOnTurn = 0;
       player.setIsPassed(false, false);
     });
+  }
+
+  private startTurn() {
+    this.findPlayerWithThreeCardsOfSameRank();
+
+    this.setPlayersRolesForTurnByDefenderId();
 
     // Максимум может разыграться столько карт, сколько есть у защищающегося
     this.maxCardsForThisTurn =
@@ -188,13 +215,7 @@ export class CardsGameScene extends Phaser.Scene {
     }
   }
 
-  private endTurn() {
-    // Убираем возможность окончить ход у всех игроков
-    // * Именно здесь, чтобы в конце игры не оставались кнопки "Пропустить ход"
-    this.players.forEach((player) => {
-      player.setIsPassed(false, false);
-    });
-
+  private distributeCardsToPlayersAndSetDefenderForNextTurn() {
     const defender = this.players[this.defendingPlayerId];
     const penaltyCards =
       this.interactiveTable.attackCardsDataOnTable.length -
@@ -202,7 +223,9 @@ export class CardsGameScene extends Phaser.Scene {
 
     // Если есть штрафные карты, то сначала выдаём карты защищающемуся
     if (penaltyCards > 0) {
-      const cardsToGive = Math.max(4 - defender.cards.length, 0) + penaltyCards;
+      const cardsToGive =
+        Math.max(this.normalCardsAmountOnHand - defender.cards.length, 0) +
+        penaltyCards;
       const newCards = this.unplayedDeck.getCards(cardsToGive);
       defender.addCards(newCards);
     }
@@ -217,23 +240,22 @@ export class CardsGameScene extends Phaser.Scene {
     }
 
     // Находим подкидывающих игроков справа от защищающегося
-    let currentIndex = this.defendingPlayerId + 1;
+    let currentIndex = findNextPlayerIndex(
+      this.playersAmount,
+      this.defendingPlayerId
+    );
     while (attackersOrder.length < this.playersAmount - 1) {
-      // Переходим на начало списка, если вышли за его пределы
-      if (currentIndex >= this.playersAmount) {
-        currentIndex = 0;
-      }
-
       const player = this.players[currentIndex];
       if (player.role === SUPPORT) {
         attackersOrder.push(player);
       }
 
-      currentIndex++;
+      currentIndex = findNextPlayerIndex(this.playersAmount, currentIndex);
     }
+
     // Выдаём карты атакующему и подкидывающим
     for (const player of attackersOrder) {
-      const cardsToGive = 4 - player.cards.length;
+      const cardsToGive = this.normalCardsAmountOnHand - player.cards.length;
       if (cardsToGive > 0) {
         const newCards = this.unplayedDeck.getCards(cardsToGive);
         player.addCards(newCards);
@@ -242,7 +264,7 @@ export class CardsGameScene extends Phaser.Scene {
 
     // Выдаём карты защищающемуся, если штрафных карт не было
     if (penaltyCards === 0) {
-      const cardsToGive = 4 - defender.cards.length;
+      const cardsToGive = this.normalCardsAmountOnHand - defender.cards.length;
       const newCards = this.unplayedDeck.getCards(cardsToGive);
       defender.addCards(newCards);
     }
@@ -251,20 +273,13 @@ export class CardsGameScene extends Phaser.Scene {
 
     this.playedDeck.addCards(removedCardsAmount);
 
+    // Пропуск хода защищающегося игрока, если он отбил не все карты
     const switchRolesStep = penaltyCards > 0 ? 2 : 1;
     for (let i = 0; i < switchRolesStep; i++) {
-      this.defendingPlayerId =
-        this.defendingPlayerId < this.playersAmount - 1
-          ? this.defendingPlayerId + 1
-          : 0;
-    }
-
-    const isThereWinners = this.checkWinners();
-
-    if (isThereWinners) {
-      this.endGame();
-    } else {
-      this.startTurn();
+      this.defendingPlayerId = findNextPlayerIndex(
+        this.playersAmount,
+        this.defendingPlayerId
+      );
     }
   }
 
@@ -279,15 +294,29 @@ export class CardsGameScene extends Phaser.Scene {
     return isThereWinners;
   }
 
+  private endTurn() {
+    // Убираем возможность окончить ход у всех игроков
+    // именно здесь, чтобы в конце игры не оставались кнопки "Пропустить ход"
+    this.players.forEach((player) => {
+      player.setIsPassed(false, false);
+    });
+
+    this.distributeCardsToPlayersAndSetDefenderForNextTurn();
+
+    const isThereWinners = this.checkWinners();
+
+    if (isThereWinners) {
+      this.endGame();
+    } else {
+      this.startTurn();
+    }
+  }
+
   private endGame() {
     // Блокируем возможность класть карты дальше
     this.interactiveTable.isGameOver = true;
 
     this.restartButton.setButtonVisible(true);
-  }
-
-  private restartGame() {
-    this.scene.restart();
   }
 
   private handleCardPlayed(
@@ -297,28 +326,31 @@ export class CardsGameScene extends Phaser.Scene {
     x: number,
     y: number
   ) {
-    let isAdded = false;
+    let isCardAddedToTable = false;
     const player = this.players[playerId];
 
     // Добавление карты на стол в зависимости от роли игрока
     if (
       playerRole === ATTACKER ||
+      // Для подкидывающего проверяем, что атакующий уже положил карту
       (playerRole === SUPPORT &&
         this.interactiveTable.attackCardsDataOnTable.length > 0)
     ) {
+      // Проверяем, что игрок ещё не вышел за количество карт,
+      // которые можно положить за этот ход в общем и для него конкретно
       if (
         this.maxCardsForThisTurn >
           this.interactiveTable.attackCardsDataOnTable.length &&
         player.playedCardsOnTurn < 3
       ) {
-        isAdded = this.interactiveTable.addAttackCard(card);
+        isCardAddedToTable = this.interactiveTable.addAttackCard(card);
       }
     } else if (playerRole === DEFENDER) {
-      isAdded = this.interactiveTable.addDefenseCard(card, x, y);
+      isCardAddedToTable = this.interactiveTable.addDefenseCard(card, x, y);
     }
 
     // Если карту добавили на стол, то удаляем её из руки игрока, иначе возвращаем в руку
-    if (isAdded) {
+    if (isCardAddedToTable) {
       player.playedCardsOnTurn += 1;
       player.removeCard(card.id);
 
@@ -335,28 +367,35 @@ export class CardsGameScene extends Phaser.Scene {
     }
   }
 
-  private calculatePlayersPositions(width: number, height: number) {
-    const normalAngle = 0;
-    const reversedAngle = Math.PI;
+  private resizeCanvasAndReplaceElements() {
+    const width = window.innerWidth;
+    const height = window.innerHeight;
 
-    if (this.playersAmount === 2) {
-      return [
-        { x: width / 2, y: height, angle: normalAngle },
-        { x: width / 2, y: 0, angle: reversedAngle },
-      ];
-    } else if (this.playersAmount === 3) {
-      return [
-        { x: width / 2, y: height, angle: normalAngle },
-        { x: width / 2 - cardsSizes.width * 2, y: 0, angle: reversedAngle },
-        { x: width / 2 + cardsSizes.width * 2, y: 0, angle: reversedAngle },
-      ];
-    } else {
-      return [
-        { x: width / 2 - cardsSizes.width * 2, y: height, angle: normalAngle },
-        { x: width / 2 - cardsSizes.width * 2, y: 0, angle: reversedAngle },
-        { x: width / 2 + cardsSizes.width * 2, y: 0, angle: reversedAngle },
-        { x: width / 2 + cardsSizes.width * 2, y: height, angle: normalAngle },
-      ];
-    }
+    this.scale.resize(width, height);
+    this.cameras.main.setSize(width, height);
+
+    this.backgroundTileSprite.setSize(width, height);
+
+    const newPlayersPositions = calculatePlayersPositions(
+      this.playersAmount,
+      width,
+      height
+    );
+
+    this.players.forEach((player, index) => {
+      player.setPosition(
+        newPlayersPositions[index].x,
+        newPlayersPositions[index].y
+      );
+    });
+
+    this.playedDeck.setPosition(width - 200, height / 2);
+    this.unplayedDeck.setPosition(200, height / 2);
+
+    this.restartButton.setPosition(width / 2, height / 2);
+  }
+
+  destroy() {
+    window.removeEventListener("resize", this.resizeCanvasAndReplaceElements);
   }
 }

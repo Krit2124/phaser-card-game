@@ -22,7 +22,7 @@ export default class PlayerHand extends Phaser.GameObjects.Container {
   private initialCardPositions: { x: number; y: number }[] = [];
 
   public isPassed: boolean = false;
-  private passButton!: Phaser.GameObjects.Text;
+  private passButtonText!: Phaser.GameObjects.Text;
   private passButtonBackground!: Phaser.GameObjects.Rectangle;
   public playedCardsOnTurn: number = 0;
 
@@ -44,9 +44,12 @@ export default class PlayerHand extends Phaser.GameObjects.Container {
       .setOrigin(0.5)
       .setInteractive({ cursor: "pointer" })
       .setVisible(false);
+    this.passButtonBackground.on("pointerdown", () =>
+      this.setIsPassed(true, false, true)
+    );
     this.add(this.passButtonBackground);
 
-    this.passButton = this.scene.add
+    this.passButtonText = this.scene.add
       .text(-upperElementsOffsetX, upperElementsOffsetY, "Пропустить ход", {
         fontFamily: "Roboto",
         fontSize: "24px",
@@ -54,13 +57,7 @@ export default class PlayerHand extends Phaser.GameObjects.Container {
       })
       .setOrigin(0.5)
       .setVisible(false);
-
-    this.add(this.passButton);
-
-    // Обработчик события нажатия на кнопку
-    this.passButtonBackground.on("pointerdown", () =>
-      this.setIsPassed(true, false, true)
-    );
+    this.add(this.passButtonText);
 
     this.roleIconBackground = scene.add
       .circle(upperElementsOffsetX, upperElementsOffsetY, 25, 0x000000)
@@ -74,13 +71,13 @@ export default class PlayerHand extends Phaser.GameObjects.Container {
     this.add(this.roleIcon);
 
     this.winnerIconBackground = scene.add
-      .circle(0, -150, 100, 0x000000)
+      .circle(0, upperElementsOffsetY, 100, 0x000000)
       .setStrokeStyle(6, 0x770000)
       .setVisible(false);
     this.add(this.winnerIconBackground);
 
     this.winnerIcon = this.scene.add
-      .image(0, -150, "crown")
+      .image(0, upperElementsOffsetY, "crown")
       .setScale(0.8)
       .setRotation(angle)
       .setVisible(false);
@@ -101,8 +98,10 @@ export default class PlayerHand extends Phaser.GameObjects.Container {
     shouldCheckForEndOfTurn: boolean = false
   ) {
     this.isPassed = isPassed;
-    this.passButton.setVisible(isPassButtonVisible);
+
+    this.passButtonText.setVisible(isPassButtonVisible);
     this.passButtonBackground.setVisible(isPassButtonVisible);
+
     if (shouldCheckForEndOfTurn) {
       this.emit("checkEndOfTurn");
     }
@@ -110,6 +109,7 @@ export default class PlayerHand extends Phaser.GameObjects.Container {
 
   public setWinner(isWinner: boolean = true) {
     this.isWinner = isWinner;
+
     this.winnerIconBackground.setVisible(isWinner);
     this.winnerIcon.setVisible(isWinner);
 
@@ -118,6 +118,8 @@ export default class PlayerHand extends Phaser.GameObjects.Container {
   }
 
   public addCards(newCards: Card[]) {
+    if (!newCards || newCards.length === 0) return;
+
     for (const card of newCards) {
       this.cards = [...this.cards, card];
 
@@ -139,6 +141,7 @@ export default class PlayerHand extends Phaser.GameObjects.Container {
 
   public removeCard(id: number) {
     const index = this.cards.findIndex((card) => card.id === id);
+    if (index === -1) return;
 
     this.cards.splice(index, 1);
     this.cardsImages[index].destroy();
@@ -157,7 +160,6 @@ export default class PlayerHand extends Phaser.GameObjects.Container {
       }
     );
 
-    // Завершение перетаскивания
     cardImage.on("dragend", (pointer: Phaser.Input.Pointer) => {
       const table = this.scene.children.getByName(
         "interactiveTable"
@@ -183,6 +185,7 @@ export default class PlayerHand extends Phaser.GameObjects.Container {
     const cardImage = this.cardsImages[index];
     const initialPosition = this.initialCardPositions[index];
 
+    // Анимация возвращения
     this.scene.tweens.add({
       targets: cardImage,
       x: initialPosition.x,

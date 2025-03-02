@@ -1,22 +1,24 @@
 import { cardsSizes } from "../../constants/cardsSizes";
 
 export default class PlayedDeck extends Phaser.GameObjects.Container {
-  private cardImages: Phaser.GameObjects.Image[] = [];
   public cardsCount: number = 0;
+  private cardsGroup!: Phaser.GameObjects.Group;
 
-  private playedCardsText!: Phaser.GameObjects.Text;
-  private playedCardsBackground!: Phaser.GameObjects.Arc;
+  private playedCardsAmountText!: Phaser.GameObjects.Text;
+  private playedCardsAmountBackground!: Phaser.GameObjects.Arc;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y);
 
-    this.playedCardsBackground = scene.add
+    this.cardsGroup = this.scene.add.group();
+
+    this.playedCardsAmountBackground = scene.add
       .circle(0, 0, 50, 0x000000)
       .setStrokeStyle(5, 0x770000)
       .setVisible(false);
-    this.add(this.playedCardsBackground);
+    this.add(this.playedCardsAmountBackground);
 
-    this.playedCardsText = this.scene.add
+    this.playedCardsAmountText = this.scene.add
       .text(0, 0, String(this.cardsCount), {
         fontSize: "64px",
         fontFamily: "Roboto",
@@ -24,16 +26,16 @@ export default class PlayedDeck extends Phaser.GameObjects.Container {
       })
       .setOrigin(0.5)
       .setVisible(false);
-    this.add(this.playedCardsText);
+    this.add(this.playedCardsAmountText);
 
     this.scene.add.existing(this);
   }
 
   public addCards(amount: number) {
     for (let i = 0; i < amount; i++) {
-      const offsetX = Phaser.Math.Between(-10, 10);
-      const offsetY = Phaser.Math.Between(-10, 10);
-      const rotation = Phaser.Math.Between(-5, 5) * (Math.PI / 180);
+      const offsetX = Phaser.Math.Between(-20, 20);
+      const offsetY = Phaser.Math.Between(-15, 15);
+      const rotation = Phaser.Math.Between(-10, 10) * (Math.PI / 180);
 
       const cardImage = this.scene.add
         .image(offsetX, offsetY, "card_back")
@@ -41,21 +43,20 @@ export default class PlayedDeck extends Phaser.GameObjects.Container {
         .setRotation(rotation);
 
       this.add(cardImage);
-      this.cardImages.push(cardImage);
-      this.cardsCount++;
+      this.cardsGroup.add(cardImage);
     }
 
-    this.playedCardsBackground.setVisible(true);
-    this.playedCardsText.setVisible(true);
-    this.playedCardsText.setText(String(this.cardsCount));
-
-    this.bringToTop(this.playedCardsBackground);
-    this.bringToTop(this.playedCardsText);
+    this.updateCardsAmount(amount);
   }
 
-  public clear() {
-    this.cardImages.forEach((card) => card.destroy());
-    this.cardImages = [];
-    this.cardsCount = 0;
+  public updateCardsAmount(amount: number) {
+    this.cardsCount += amount;
+
+    this.playedCardsAmountBackground.setVisible(true);
+    this.playedCardsAmountText.setVisible(true);
+    this.playedCardsAmountText.setText(String(this.cardsCount));
+
+    this.bringToTop(this.playedCardsAmountBackground);
+    this.bringToTop(this.playedCardsAmountText);
   }
 }

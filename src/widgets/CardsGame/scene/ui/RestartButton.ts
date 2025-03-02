@@ -3,7 +3,6 @@ interface RestartButtonOptions {
   restartFunction: () => void;
 }
 
-// Кнопка перезапуска, не добавляемая в сцену, чтобы была возможность кликнуть на неё после окончания игры
 export default class RestartButton extends Phaser.GameObjects.Container {
   private restartButton!: Phaser.GameObjects.Arc;
   private restartButtonIcon!: Phaser.GameObjects.Image;
