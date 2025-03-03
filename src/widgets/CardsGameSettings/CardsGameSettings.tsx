@@ -1,6 +1,7 @@
 import { ElementContainer, DefaultInput, DefaultTextButton } from "@/shared/ui";
 import s from "./CardsGameSettings.module.css";
 import { BackgroundPicker } from "@/features/BackgroundPicker";
+import { backgroundsForCardsGame } from "@/shared/constants";
 
 interface CardsGameSettingsProps {
   players: number;
@@ -36,6 +37,7 @@ const CardsGameSettings = ({
         <BackgroundPicker
           selectedBackgroundId={selectedBackgroundId}
           setSelectedBackgroundId={setSelectedBackgroundId}
+          backgrounds={backgroundsForCardsGame}
         />
       </ElementContainer>
 
