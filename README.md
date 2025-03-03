@@ -1,50 +1,170 @@
-# React + TypeScript + Vite
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+# Карточная игра на Phaser + TypeScript + React
 
-Currently, two official plugins are available:
+Задача: написать демонстрационное приложение карточной игры. Количество игроков — 2. Игра ведется в открытую (карты обоих соперников отображаются на экране).
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+Реализация интерфейса может быть любой, на выбор разработчика. От командной строки до канваса.
+-   В игре участвует колода из 36 карт, за исключением 8 и 9-ок
+-   Младшие карты бьют старшие, т.е. 10 бьет даму, король туза и т.д.
+-   На руки выдается 4 карты
+-   За ход игрок может использовать не более 3-х карт
+-   После каждой раздачи игроки добирают недостающие карты из колоды (до 4-х)
+-   Если игрок не может побить карты, они скидываются в отбой, но игрок берет из колоды дополнительные карты сверху 4-х, а так же пропускает свой ход. Например, если игрок №2 не смог отбить 2 карты из 3-х, то после хода у него на руках должно быть 6 карт, а ходить будет снова игрок №1.
+-   Если в один из моментов игры на руках у игрока оказываются 3 карты одного ранга, он делает ход вне очереди.
+-   Выигрывает тот, кто первым избавится от всех карт
+-   **Бонус**: спроектировать игру так, чтобы участвовать могло любое количество игроков. Предложить необходимые изменения в правила.
 
-## Expanding the ESLint configuration
+## Структура проекта
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
-
-- Configure the top-level `parserOptions` property like this:
-
-```js
-export default tseslint.config({
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+Для приложения была использована архитектура FSD: [https://feature-sliced.design/docs/get-started/overview](https://feature-sliced.design/docs/get-started/overview)
+```
+- public/                     // Папка для статических файлов (изображения)
+- src/                        // Главная папка с исходным кодом приложения
+  - app/                        // Входная точка приложения и основные настройки
+    - globalStyles/               // Глобальные стили
+    - layouts/                    // Макеты страниц
+    - main.tsx                    // Главный файл, точка входа в приложение
+    - vite-env.d.ts               // Файл для определения типов окружения в Vite
+  - entities/                   // Сущности (базовые строительные блоки приложения)
+    - BackgroundPickerItem/       // Карточка для выбора фона игры
+    - GameCardToChoose/           // Карточка для выбора игры
+  - features/                   // Фичи (комплексные модули) 
+    - BackgroundPicker/           // Форма для выбора фона игры
+  - pages/                      // Страницы приложения
+    - CardsGamePage/              // Страница с карточной игрой, требуемой по заданию
+    - ErrorPage/                  // Страница для вывода ошибки при навигации
+    - GameSelectionPage/          // Страница для выбора игры
+  - shared/                     // Общие модули и ресурсы, используемые в приложении
+    - constants                   // Фиксированные данные (ссылки на фоны и массивы с колодами на 28 карт и на 52 карты на всякий случай)
+    - types/                      // Общие типы TypeScript
+    - ui/                         // Компоненты пользовательского интерфейса
+  - widgets/                    // Виджеты (самостоятельные блоки)
+    - CardsGame/                  // Компонент с требуемой карточной игрой
+      - constants/                  // Возможные роли игроков и размеры карточек
+      - lib/                        // Функции общего назначения, которые стоило вынести из сцены игры
+        - calculatePlayersPosition.ts // Функция для позиционирования игроков за столом
+        - findNextOrPrevPlayer        // Функции для определения следующего или предыдущего игрока 
+      - scene/                      // Сцена с игрой
+        - elements/                   // Контейнеры для блоков сцены
+        - ui/                         // Небольшие визуальные элементы
+        - CardsGameScene.ts           // Сама сцена игры
+    - CardsGameSettings/          // Настройки для карточной игры (количество игроков и фон)
+- .gitignore                  // Файлы и папки, игнорируемые Git
+- bun.lockb                   // Lockfile для Bun
+- eslint.config.js            // Конфигурация для линтера ESLint
+- index.html                  // Основной HTML-файл, используемый Vite
+- package.json                // Список зависимостей и скриптов проекта
+- README.md                   // Документация проекта
+- tsconfig.app.json           // Конфигурация TypeScript для приложения
+- tsconfig.json               // Общая конфигурация TypeScript
+- tsconfig.node.json          // Конфигурация TypeScript для серверных/Node.js файлов
+- vercel.json                 // Конфигурация для vercel
+- vite.config.ts              // Конфигурация Vite
 ```
 
-- Replace `tseslint.configs.recommended` to `tseslint.configs.recommendedTypeChecked` or `tseslint.configs.strictTypeChecked`
-- Optionally add `...tseslint.configs.stylisticTypeChecked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and update the config:
+## Развёртывание проекта
 
-```js
-// eslint.config.js
-import react from 'eslint-plugin-react'
+Ссылка на деплой: https://phaser-card-game.vercel.app/
 
-export default tseslint.config({
-  // Set the react version
-  settings: { react: { version: '18.3' } },
-  plugins: {
-    // Add the react plugin
-    react,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended rules
-    ...react.configs.recommended.rules,
-    ...react.configs['jsx-runtime'].rules,
-  },
-})
+Для локального запуска веб-приложение нужно выполнить следующие инструкции:
+
+### 1. Клонирование репозитория
+
+```bash
+git clone https://github.com/Krit2124/phaser-card-game
+```
+
+---
+
+### 2. Перейдите в директорию проекта 
+
+```bash 
+cd phaser-card-game
+```
+
+---
+
+
+### 3. Убедитесь, что у вас установлены необходимые зависимости
+
+-   [Node.js](https://nodejs.org/)  (рекомендуется версия  **16.x**  или выше)
+-   [npm](https://www.npmjs.com/)  или  [bun](https://bun.sh/)  для управления пакетами
+
+Проверьте версии Node.js и npm, выполнив:
+```bash
+node -v
+npm -v
+# Или, если используете bun:
+bun -v
+```
+
+---
+
+### 4. Установка зависимостей
+
+Для установки всех необходимых пакетов выполните:
+
+```bash
+npm install
+```
+
+Или, если вы используете Bun:
+
+```bash
+bun install
+```
+
+---
+
+### 5. Запуск приложения в режиме разработки
+
+После установки зависимостей запустите проект локально:
+
+```bash
+npm run dev
+```
+
+Или с использованием Bun:
+
+```bash
+bun run dev
+```
+
+После запуска вы увидите в консоли URL-адрес. Например:
+
+```
+http://localhost:5173/
+```
+
+Перейдите по указанному адресу в вашем браузере.
+
+---
+
+### 6. Сборка приложения для продакшена
+
+Для сборки оптимизированной версии приложения выполните:
+
+```bash
+npm run build
+```
+
+Или с использованием Bun:
+
+```bash
+bun run build
+```
+
+Это создаст папку `dist`, содержащую готовую к развертыванию версию приложения.
+
+---
+
+### 7. Предпросмотр продакшн-сборки (опционально)
+
+Чтобы запустить предварительный просмотр продакшн-версии:
+```
+npm run preview
+```
+Или с использованием Bun:
+```
+bun run preview
 ```
